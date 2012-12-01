@@ -3,6 +3,7 @@ class JSPHP_VM {
     private $ops = array ();
     private $processedOps = array ();
     private $opIndex;
+    private $maxOpIndex;
     private $stack;
     
     private $labels = array ();
@@ -78,6 +79,7 @@ class JSPHP_VM {
         if ($pi) {
             $this->pi[] = $pi;
         }
+        $this->maxOpIndex = sizeof($this->ops) - 1;
         
         return $opIndex;
     }
@@ -91,6 +93,41 @@ class JSPHP_VM {
     function runOpCode(array $ops, $file = null) {
         $opIndex = $this->loadOpCode($ops, $file);
         return $this->runFromOpIndex($opIndex);
+    }
+    
+    /**
+     * Load OpCode and schedule to run it, within the context of an eval() statement.
+     * @param array $ops
+     * @param string|null $label    Optional label so we can reuse compiled eval statements.
+     * @return int
+     */
+    function evalOpCode(array $ops, $label = null) {
+        if ($label && isset ($this->labels[$label])) {
+            $opIndex = $this->labels[$label];
+        } else {
+            // don't pop at the last statement, but return
+            for ($i = sizeof($ops) - 1; $i >= 0; $i--) {
+                if ($ops[$i][0] == 'pop') {
+                    $ops[$i] = array ('return');
+                    break;
+                }
+            }
+            $desc = "eval'ed code";
+            if ($line = $this->currentLine()) {
+                $desc .= " at line {$line}";
+                if ($file = $this->currentFile()) {
+                    $desc .= " of {$file}";
+                }
+            }
+            if ($label) {
+                array_unshift($ops, array ('%label', $label));
+            }
+            $opIndex = $this->loadOpCode($ops, $desc);
+        }
+        
+        $this->varScopeStack[] = $this->vars;
+        $this->stack[] = $this->opIndex;
+        $this->opIndex = $opIndex - 1;
     }
     
     /**
@@ -210,10 +247,10 @@ class JSPHP_VM {
     }
     
     private function runLoop() {
-        $maxOp = sizeof($this->ops) - 1;
+        $maxOp =& $this->maxOpIndex;
         // why put these in variables? it's faster. it matters: this loop shoud be freaky fast
         $opIndex = $this->opIndex;
-        $processedOps = $this->processedOps;
+        $processedOps =& $this->processedOps;
         while ($opIndex >= 0 && $opIndex <= $maxOp) {
             list ($cb, $args) = $processedOps[$opIndex];
             call_user_func_array($cb, $args);
@@ -442,6 +479,9 @@ class JSPHP_VM {
         }
         $f = array_pop($this->stack);
         $context = array_pop($this->stack);
+        if (!$f instanceof JSPHP_Runtime_FunctionHeader) {
+            $this->error("Function call to non-function");
+        }
         
         // now call the function
         $this->prepareFunctionCall($f, $context, $args);
@@ -601,7 +641,7 @@ class JSPHP_VM {
         if ($this->opIndex >= 0 && $this->opIndex < sizeof($this->loc)) {
             list ($line, $file) = $this->loc[$this->opIndex];
             if ($file) {
-                $msg = "Error on line {$line} of file {$file}: {$msg}";
+                $msg = "Error on line {$line} of {$file}: {$msg}";
             } else {
                 $msg = "Error on line {$line}: {$msg}";
             }

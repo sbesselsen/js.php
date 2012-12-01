@@ -13,9 +13,13 @@ require_once 'JSPHP/Runtime/Common/StringPrototype.php';
 class JSPHP_Runtime {
     public $vars;
     public $vm;
+    public $evalParser;
+    public $evalCompiler;
     
     protected $exports = array ();
     protected $commonVars;
+    
+    protected $cachedEvalOpCode = array ();
     
     function __construct() {
         $this->commonVars = new JSPHP_Runtime_VarScope();
@@ -45,6 +49,8 @@ class JSPHP_Runtime {
         $this->commonVars['Boolean']['prototype'] = $this->createObject();
         
         $this->commonVars['Math'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_MathObject(), $objConstructor['prototype'], $objConstructor);
+        
+        $this->commonVars['eval'] = $this->createPHPFunction(array ($this, 'runtimeEval'), false);
     }
     
     function runtimeFunctionCall() {
@@ -56,6 +62,26 @@ class JSPHP_Runtime {
     
     function runtimeFunctionApply($f, $context, $args) {
         $this->vm->prepareFunctionCall($f, $context, $args);
+    }
+    
+    function runtimeEval($context, $code) {
+        $label = substr(md5("eval({$code})"), 0, 12);
+        if (isset ($this->cachedEvalOpCode[$label])) {
+            $ops = $this->cachedEvalOpCode[$label];
+        } else {
+            if (!$this->evalParser) {
+                require_once 'JSPHP/Parser.php';
+                $this->evalParser = new JSPHP_Parser();
+            }
+            if (!$this->evalCompiler) {
+                require_once 'JSPHP/Compiler.php';
+                $this->evalCompiler = new JSPHP_Compiler();
+            }
+            $tree = $this->evalParser->parseJS($code);
+            $ops = $this->evalCompiler->compile($tree);
+            $this->cachedEvalOpCode[$label] = $ops;
+        }
+        $this->vm->evalOpCode($ops, $label);
     }
     
     function setupJSPHPVars() {
