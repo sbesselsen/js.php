@@ -6,7 +6,7 @@ class JSPHP_Runtime_FunctionHeader extends JSPHP_Runtime_Object {
     public $parentVarScope;
     public $opIndex = -1;
     public $referencesArguments = false;
-    public $vm;
+    public $runtime;
     
     function callFunction() {
         $args = func_get_args();
@@ -14,9 +14,9 @@ class JSPHP_Runtime_FunctionHeader extends JSPHP_Runtime_Object {
     }
     
     function callFunctionWithArgs($context, array $args) {
-        if (!$this->vm) {
+        if (!$this->runtime || !$this->runtime->vm) {
             throw new Exception("JS function is not meant to be called manually");
         }
-        return $this->vm->callFunction($this, $context, $args);
+        return $this->runtime->vm->callFunction($this, $context, $args);
     }
 }

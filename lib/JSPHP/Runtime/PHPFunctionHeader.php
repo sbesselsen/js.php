@@ -6,8 +6,8 @@ class JSPHP_Runtime_PHPFunctionHeader extends JSPHP_Runtime_FunctionHeader {
     public $pushesReturnValue;
     public $ignoreContext = false;
     
-    function __construct($callback, $pushesReturnValue = true) {
-        parent::__construct();
+    function __construct(JSPHP_Runtime_FunctionHeader $constructor, $callback, $pushesReturnValue = true) {
+        parent::__construct($constructor);
         $this->callback = $callback;
         $this->pushesReturnValue = $pushesReturnValue;
     }

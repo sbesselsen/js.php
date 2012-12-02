@@ -174,15 +174,14 @@ class JSPHP_Runtime {
     }
     
     function createFunction() {
-        $fConstructor = $this->vars['Function'];
-        $f = new JSPHP_Runtime_FunctionHeader($fConstructor);
+        $f = new JSPHP_Runtime_FunctionHeader($this->vars['Function']);
         $f['prototype'] = $this->createObject();
-        $f->vm = $this->vm;
+        $f->runtime = $this;
         return $f;
     }
     
     function createPHPFunction($callback, $pushesReturnValue = true) {
-        $f = new JSPHP_Runtime_PHPFunctionHeader($callback, $pushesReturnValue);
+        $f = new JSPHP_Runtime_PHPFunctionHeader($this->vars['Function'], $callback, $pushesReturnValue);
         $f['prototype'] = $this->createObject();
         return $f;
     }

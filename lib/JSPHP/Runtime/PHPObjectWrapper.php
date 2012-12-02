@@ -38,14 +38,14 @@ class JSPHP_Runtime_PHPObjectWrapper extends JSPHP_Runtime_Object {
     function functionGet($k) {
         $cb = array ($this->wrappedObject, $k);
         if (is_callable($cb)) {
-            $f = new JSPHP_Runtime_PHPFunctionHeader($cb);
+            $f = $this->runtime->createPHPFunction($cb);
             $f->ignoreContext = true;
             return $f;
         } else {
             $k .= "__onObject";
             $cb = array ($this->wrappedObject, $k);
             if (is_callable($cb)) {
-                $f = new JSPHP_Runtime_PHPFunctionHeader($cb);
+                $f = $this->runtime->createPHPFunction($cb);
                 return $f;
             }
         }
