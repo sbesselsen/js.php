@@ -4,8 +4,15 @@ class JSPHP_Runtime_Object implements ArrayAccess, IteratorAggregate {
     private $constructor;
     private $values = array ();
     public $primitiveValue;
+    public $isObjectConstructor = false;
     
     function __construct(JSPHP_Runtime_FunctionHeader $constructor = null) {
+        if ($constructor) {
+            $this->setConstructor($constructor);
+        }
+    }
+    
+    function setConstructor(JSPHP_Runtime_FunctionHeader $constructor = null) {
         $this->constructor = $constructor;
         if (isset ($constructor['prototype'])) {
             $this->prototype = $constructor['prototype'];
@@ -30,7 +37,7 @@ class JSPHP_Runtime_Object implements ArrayAccess, IteratorAggregate {
             return $this->values[$k];
         } else if ($k === 'constructor') {
             return $this->constructor;
-        } else if ($this->prototype) {
+        } else if ($this->prototype && $this->prototype !== $this) {
             return $this->prototype[$k];
         } else {
             return null;
@@ -46,9 +53,11 @@ class JSPHP_Runtime_Object implements ArrayAccess, IteratorAggregate {
     }
     
     function isPrototypalInstanceOf(JSPHP_Runtime_FunctionHeader $f) {
-        if ($this->constructor === $f) {
+        if ($f->isObjectConstructor) {
             return true;
-        } else if ($this->prototype) {
+        } else if ($this->constructor === $f) {
+            return true;
+        } else if ($this->prototype && $this->prototype !== $this) {
             return $this->prototype->isPrototypalInstanceOf($f);
         }
         return false;

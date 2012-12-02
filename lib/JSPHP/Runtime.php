@@ -29,13 +29,26 @@ class JSPHP_Runtime {
     }
     
     function setupCommonVars() {
+        /**
+         * Set up the intricate structure where:
+         * - All objects are instanceof Object (by setting $objConstructor->isObjectConstructor = true)
+         * - All functions are instanceof Function, including Function itself
+         * - Object instanceof Function
+         */
         $objConstructor = new JSPHP_Runtime_FunctionHeader();
+        $objConstructor->isObjectConstructor = true;
         $this->commonVars['Object'] = $objConstructor;
         $objConstructor['prototype'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_ObjectPrototype(), $objConstructor);
         
         $functionConstructor = new JSPHP_Runtime_FunctionHeader();
+        $objConstructor->setConstructor($functionConstructor);
+        $functionConstructor->setConstructor($functionConstructor);
         $this->commonVars['Function'] = $functionConstructor;
         $functionPrototype = $functionConstructor['prototype'] = $this->createObject();
+        
+        /**
+         * Set up all the other machinery
+         */
         $functionConstructor['prototype']['call'] = $this->createPHPFunction(array ($this, 'runtimeFunctionCall'), false);
         $functionConstructor['prototype']['apply'] = $this->createPHPFunction(array ($this, 'runtimeFunctionApply'), false);
         
