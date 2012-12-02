@@ -60,7 +60,14 @@ class JSPHP_Runtime {
         $this->vm->prepareFunctionCall($f, $context, $args);
     }
     
-    function runtimeFunctionApply($f, $context, $args) {
+    function runtimeFunctionApply($f, $context, $args = null) {
+        if ($args instanceof JSPHP_Runtime_Array) {
+            $args = $args->getOwnValues();
+        } else if ($args === null) {
+            $args = array ();
+        } else if(!is_array($args)) {
+            throw new Exception("Argument 2 of .apply should be an array");
+        }
         $this->vm->prepareFunctionCall($f, $context, $args);
     }
     

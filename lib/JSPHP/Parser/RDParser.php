@@ -485,8 +485,8 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
             $this->mergeInfixLassoc($exprs, '%', 'mod');
             $this->mergeInfixRassoc($exprs, '*', 'mul');
             $this->mergeInfixLassoc($exprs, '/', 'div');
-            $this->mergeInfixRassoc($exprs, '+', 'add');
             $this->mergeInfixLassoc($exprs, '-', 'sub');
+            $this->mergeInfixRassoc($exprs, '+', 'add');
             $this->mergeInfixRassoc($exprs, '<', 'les');
             $this->mergeInfixRassoc($exprs, '<=', 'leq');
             $this->mergeInfixRassoc($exprs, '>', 'gre');
