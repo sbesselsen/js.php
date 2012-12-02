@@ -5,9 +5,11 @@ class JSPHP_Runtime_Object implements ArrayAccess, IteratorAggregate {
     private $values = array ();
     public $primitiveValue;
     
-    function __construct($prototype = null, $constructor = null) {
-        $this->prototype = $prototype;
+    function __construct(JSPHP_Runtime_FunctionHeader $constructor = null) {
         $this->constructor = $constructor;
+        if (isset ($constructor['prototype'])) {
+            $this->prototype = $constructor['prototype'];
+        }
     }
     
     function getIterator() {

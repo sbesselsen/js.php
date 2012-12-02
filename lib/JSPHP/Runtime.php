@@ -31,7 +31,7 @@ class JSPHP_Runtime {
     function setupCommonVars() {
         $objConstructor = new JSPHP_Runtime_FunctionHeader();
         $this->commonVars['Object'] = $objConstructor;
-        $objConstructor['prototype'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_ObjectPrototype(), null, $objConstructor);
+        $objConstructor['prototype'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_ObjectPrototype(), $objConstructor);
         
         $functionConstructor = new JSPHP_Runtime_FunctionHeader();
         $this->commonVars['Function'] = $functionConstructor;
@@ -39,16 +39,16 @@ class JSPHP_Runtime {
         $functionConstructor['prototype']['call'] = $this->createPHPFunction(array ($this, 'runtimeFunctionCall'), false);
         $functionConstructor['prototype']['apply'] = $this->createPHPFunction(array ($this, 'runtimeFunctionApply'), false);
         
-        $this->commonVars['Array'] = new JSPHP_Runtime_FunctionHeader();
+        $this->commonVars['Array'] = $this->createFunction();
         $this->commonVars['String'] = $this->createPHPFunction(array ($this, 'createString'));
-        $this->commonVars['String']['prototype'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_StringPrototype(), $objConstructor['prototype'], $objConstructor);
+        $this->commonVars['String']['prototype'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_StringPrototype(), $objConstructor);
         
         $this->commonVars['Number'] = $this->createPHPFunction(array ($this, 'createNumber'));
         $this->commonVars['Number']['prototype'] = $this->createObject();
         $this->commonVars['Boolean'] = $this->createPHPFunction(array ($this, 'createBoolean'));
         $this->commonVars['Boolean']['prototype'] = $this->createObject();
         
-        $this->commonVars['Math'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_MathObject(), $objConstructor['prototype'], $objConstructor);
+        $this->commonVars['Math'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_MathObject(), $objConstructor);
         
         $this->commonVars['eval'] = $this->createPHPFunction(array ($this, 'runtimeEval'), false);
     }
@@ -85,9 +85,8 @@ class JSPHP_Runtime {
     }
     
     function setupJSPHPVars() {
-        $objConstructor = $this->vars['Object'];
         $jsPHPObject = new JSPHP_Runtime_Common_JSPHPObject($this);
-        $this->commonVars['jsphp'] = $this->createObjectWrapper($jsPHPObject, $objConstructor['prototype'], $objConstructor);
+        $this->commonVars['jsphp'] = $this->createObjectWrapper($jsPHPObject, $this->vars['Object']);
     }
     
     /**
@@ -128,8 +127,7 @@ class JSPHP_Runtime {
         if ($data === null) {
             return null;
         } else if (is_object($data)) {
-            $objConstructor = $this->vars['Object'];
-            return $this->createObjectWrapper($data, $objConstructor['prototype'], $objConstructor);
+            return $this->createObjectWrapper($data);
         } else if (is_array($data)) {
             $out = $this->createArray();
             foreach ($data as $v) {
@@ -157,21 +155,18 @@ class JSPHP_Runtime {
     
     function createArray(array $values = null) {
         $arrConstructor = $this->vars['Array'];
-        $arr = new JSPHP_Runtime_Array($arrConstructor['prototype'], $arrConstructor);
+        $arr = new JSPHP_Runtime_Array($arrConstructor);
         if ($values) {
             $arr->setArrayValues($values);
         }
         return $arr;
     }
     
-    function createObject(array $values = null, $constructor = null, $prototype = null) {
+    function createObject(array $values = null, $constructor = null) {
         if ($constructor === null) {
             $constructor = $this->vars['Object'];
         }
-        if ($prototype === null && $constructor !== null) {
-            $prototype = $constructor['prototype'];
-        }
-        $obj = new JSPHP_Runtime_Object($constructor['prototype'], $constructor);
+        $obj = new JSPHP_Runtime_Object($constructor);
         if ($values) {
             $obj->setObjectValues($values);
         }
@@ -180,7 +175,7 @@ class JSPHP_Runtime {
     
     function createFunction() {
         $fConstructor = $this->vars['Function'];
-        $f = new JSPHP_Runtime_FunctionHeader($fConstructor['prototype'], $fConstructor);
+        $f = new JSPHP_Runtime_FunctionHeader($fConstructor);
         $f['prototype'] = $this->createObject();
         $f->vm = $this->vm;
         return $f;
@@ -192,8 +187,11 @@ class JSPHP_Runtime {
         return $f;
     }
     
-    function createObjectWrapper($obj, $prototype = null, $constructor = null) {
-        $wrapper = new JSPHP_Runtime_PHPObjectWrapper($obj, $prototype, $constructor);
+    function createObjectWrapper($obj, $constructor = null) {
+        if ($constructor === null) {
+            $constructor = $this->vars['Object'];
+        }
+        $wrapper = new JSPHP_Runtime_PHPObjectWrapper($obj, $constructor);
         $wrapper->runtime = $this;
         return $wrapper;
     }

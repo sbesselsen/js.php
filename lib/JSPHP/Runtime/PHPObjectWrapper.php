@@ -6,8 +6,8 @@ class JSPHP_Runtime_PHPObjectWrapper extends JSPHP_Runtime_Object {
     public $wrappedObject;
     public $runtime;
     
-    function __construct($obj, $prototype = null, $constructor = null) {
-        parent::__construct($prototype, $constructor);
+    function __construct($obj, $constructor = null) {
+        parent::__construct($constructor);
         $this->wrappedObject = $obj;
     }
     
