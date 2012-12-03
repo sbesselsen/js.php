@@ -13,8 +13,7 @@ require_once 'JSPHP/Runtime/Common/StringPrototype.php';
 class JSPHP_Runtime {
     public $vars;
     public $vm;
-    public $evalParser;
-    public $evalCompiler;
+    public $environment;
     
     protected $exports = array ();
     protected $commonVars;
@@ -26,6 +25,15 @@ class JSPHP_Runtime {
         $this->vars = new JSPHP_Runtime_VarScope($this->commonVars);
         $this->setupCommonVars();
         $this->setupJSPHPVars();
+    }
+    
+    protected function initEnvironment() {
+        if ($this->environment) {
+            return;
+        }
+        require_once 'JSPHP/Environment.php';
+        $this->environment = new JSPHP_Environment();
+        $this->environment->initComponents();
     }
     
     function setupCommonVars() {
@@ -89,24 +97,24 @@ class JSPHP_Runtime {
         if (isset ($this->cachedEvalOpCode[$label])) {
             $ops = $this->cachedEvalOpCode[$label];
         } else {
-            if (!$this->evalParser) {
-                require_once 'JSPHP/Parser.php';
-                $this->evalParser = new JSPHP_Parser();
-            }
-            if (!$this->evalCompiler) {
-                require_once 'JSPHP/Compiler.php';
-                $this->evalCompiler = new JSPHP_Compiler();
-            }
-            $tree = $this->evalParser->parseJS($code);
-            $ops = $this->evalCompiler->compile($tree);
+            $this->initEnvironment();
+            $tree = $this->environment->parser->parseJS($code);
+            $ops = $this->environment->compiler->compile($tree);
             $this->cachedEvalOpCode[$label] = $ops;
         }
         $this->vm->evalOpCode($ops, $label);
     }
     
+    function runtimeRequire($context, $path) {
+        $this->initEnvironment();
+        $opIndex = $this->environment->loadFile($path);
+        $this->vm->continueAtOpIndex($opIndex);
+    }
+    
     function setupJSPHPVars() {
         $jsPHPObject = new JSPHP_Runtime_Common_JSPHPObject($this);
         $this->commonVars['jsphp'] = $this->createObjectWrapper($jsPHPObject, $this->vars['Object']);
+        $this->commonVars['jsphp']['require'] = $this->createPHPFunction(array ($this, 'runtimeRequire'), false);
     }
     
     /**

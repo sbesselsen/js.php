@@ -128,6 +128,14 @@ class JSPHP_VM {
             $opIndex = $this->loadOpCode($ops, $desc);
         }
         
+        $this->continueAtOpIndex($opIndex);
+    }
+    
+    /**
+     * Continue execution at the specified opIndex and move back to the current opIndex at return.
+     * @param int $opIndex
+     */
+    function continueAtOpIndex($opIndex) {
         $this->varScopeStack[] = $this->vars;
         $this->stack[] = $this->opIndex;
         $this->opIndex = $opIndex - 1;
