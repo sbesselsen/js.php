@@ -51,6 +51,7 @@ class JSPHP_Runtime {
         $functionConstructor = new JSPHP_Runtime_FunctionHeader();
         $objConstructor->setConstructor($functionConstructor);
         $functionConstructor->setConstructor($functionConstructor);
+        $functionConstructor->setPrototype($this->createObject());
         $this->commonVars['Function'] = $functionConstructor;
         $functionPrototype = $functionConstructor['prototype'] = $this->createObject();
         
@@ -93,6 +94,7 @@ class JSPHP_Runtime {
     }
     
     function runtimeEval($context, $code) {
+        // TODO: merge this as much as possible with runtimeRequire
         $label = substr(md5("eval({$code})"), 0, 12);
         if (isset ($this->cachedEvalOpCode[$label])) {
             $ops = $this->cachedEvalOpCode[$label];
@@ -106,6 +108,8 @@ class JSPHP_Runtime {
     }
     
     function runtimeRequire($context, $path) {
+        // TODO: cache so that every file is loaded only once
+        // and find a way to signal the runtime, tell it once we are done running the code
         $this->initEnvironment();
         $opIndex = $this->environment->loadFile($path);
         $this->vm->continueAtOpIndex($opIndex);
