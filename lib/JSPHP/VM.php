@@ -107,6 +107,9 @@ class JSPHP_VM {
         } else {
             // don't pop at the last statement, but return
             for ($i = sizeof($ops) - 1; $i >= 0; $i--) {
+                if ($ops[$i][0] == 'return') {
+                    break;
+                }
                 if ($ops[$i][0] == 'pop') {
                     $ops[$i] = array ('return');
                     break;
