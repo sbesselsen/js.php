@@ -13,6 +13,8 @@ class JSPHP_VM_Evaluator {
     private $opCodeBlock;
     private $ops = array ();
     
+    private $catchStack = array ();
+    
     function __construct(JSPHP_VM $vm, JSPHP_VM_OpCodeBlock $opCodeBlock) {
         $this->vm = $vm;
         $this->runtime = $vm->runtime;
@@ -41,19 +43,61 @@ class JSPHP_VM_Evaluator {
     function evaluate() {
         $this->exports = $this->runtime->createObject();
         
-        // why put these in variables? it's faster. it matters: this loop shoud be freaky fast
-        $opIndex = $this->opIndex;
-        $ops =& $this->ops;
-        while ($opIndex >= 0) {
-            list ($name, $args) = $ops[$opIndex];
-            if ($name == 'return') {
-                break;
+        while (true) { // while loop for exception handling
+            try {
+                // why put these in variables? it's faster. it matters: this loop shoud be freaky fast
+                $opIndex = $this->opIndex;
+                $ops =& $this->ops;
+                while ($opIndex >= 0) {
+                    list ($name, $args) = $ops[$opIndex];
+                    if ($name == 'return') {
+                        break;
+                    }
+                    $cb = array ($this, 'op_' . $name);
+                    call_user_func_array($cb, $args);
+                    $opIndex = ++$this->opIndex;
+                }
+                return array_pop($this->stack);
+            } catch (Exception $e) {
+                if (!$this->catchStack) {
+                    throw $e;
+                }
+                if ($e instanceof JSPHP_VM_Exception) {
+                    $exceptionObject = $e->exceptionObject;
+                } else {
+                    $exceptionObject = $this->runtime->createObject(array (
+                        'name' => get_class($e),
+                        'message' => $e->getMessage(),
+                    ));
+                }
+                $catchLabel = array_pop($this->catchStack);
+                $this->vars['e'] = $exceptionObject;
+                $this->opIndex = $this->opCodeBlock->opIndexForLabel($catchLabel);
             }
-            $cb = array ($this, 'op_' . $name);
-            call_user_func_array($cb, $args);
-            $opIndex = ++$this->opIndex;
         }
-        return array_pop($this->stack);
+    }
+    
+    function op_throwex() {
+        $ex = array_pop($this->stack);
+        $this->stack = array ();
+        $msg = 'Exception';
+        if ($ex instanceof JSPHP_Runtime_Object) {
+            if (isset ($ex['name'])) {
+                $msg = "{$ex['name']}";
+                if (isset ($ex['message'])) {
+                    $msg .= ": {$ex['message']}";
+                }
+            }
+        }
+        $this->error($msg, $ex);
+    }
+    
+    function op_pushcatchex($label) {
+        $this->catchStack[] = $label;
+    }
+    
+    function op_popcatchex() {
+        array_pop($this->catchStack);
     }
     
     function op_declare($var) {
@@ -407,7 +451,7 @@ class JSPHP_VM_Evaluator {
         $this->vars[$k] = $val;
     }
     
-    function error($msg) {
+    function error($msg, $exceptionObject = null) {
         $fileName = $this->opCodeBlock->fileName();
         if ($lineNumber = $this->currentLine()) {
             $msg .= " on line {$lineNumber}";
@@ -415,6 +459,6 @@ class JSPHP_VM_Evaluator {
                 $msg .= " of {$fileName}";
             }
         }
-        throw new JSPHP_VM_Exception($msg, $fileName, $lineNumber);
+        throw new JSPHP_VM_Exception($msg, $fileName, $lineNumber, $exceptionObject);
     }
 }

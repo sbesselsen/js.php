@@ -7,7 +7,7 @@ require_once 'Sparse/RDParser.php';
  * as you will bump into plain opcodes very soon.
  */
 class JSPHP_Parser_RDParser extends Sparse_RDParser {
-    private $reservedWords = array ('if', 'for', 'in', 'while', 'return', 'function', 'do', 'else', 'new', 'arguments', 'typeof', 'instanceof', 'switch', 'case', 'default', 'delete');
+    private $reservedWords = array ('if', 'for', 'in', 'while', 'return', 'function', 'do', 'else', 'new', 'arguments', 'typeof', 'instanceof', 'switch', 'case', 'default', 'delete', 'try', 'catch', 'throw');
     private $breakLabelStack;
     private $continueLabelStack;
     private $functionReferencesArguments;
@@ -32,6 +32,8 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
         'objectExpr' => array ('{'),
         'typeofExpr' => array ('typeof'),
         'newObjectExpr' => array ('new'),
+        'tryCatchStatement' => array ('try'),
+        'throwStatement' => array ('throw'),
     );
     
     /**
@@ -122,6 +124,12 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
             return $st;
         }
         if ($st = $this->tryReturnStatement()) {
+            return $st;
+        }
+        if ($st = $this->tryTryCatchStatement()) {
+            return $st;
+        }
+        if ($st = $this->tryThrowStatement()) {
             return $st;
         }
         if ($st = $this->tryExprStatement()) {
@@ -1040,5 +1048,34 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
         $ops[] = array ('pop');
         $ops[] = array ('-', 'end object creation');
         return $ops;
+    }
+    
+    function tryCatchStatement() {
+        $this->text('try');
+        $ops = $this->codeBlock();
+        $this->text('catch');
+        $this->text('(');
+        $var = $this->variableName();
+        $this->text(')');
+        $catchLabel = $this->generateLabel();
+        $endLabel = $this->generateLabel();
+        array_unshift($ops, array ('pushcatchex', $catchLabel));
+        $ops[] = array ('popcatchex');
+        $ops[] = array ('goto', $endLabel);
+        $ops[] = array ('%label', $catchLabel);
+        foreach ($this->codeBlock() as $op) {
+            $ops[] = $op;
+        }
+        $ops[] = array ('%label', $endLabel);
+        return $ops;
+    }
+    
+    function throwStatement() {
+        $this->text('throw');
+        foreach ($this->expr() as $inst) {
+            $out[] = $inst;
+        }
+        $out[] = array ('throwex');
+        return $out;
     }
 }
