@@ -114,6 +114,8 @@ class JSPHP_VM {
             throw new Exception("VM must have a valid runtime to run in");
         }
         
+        $args = array_map(array ($this->runtime, 'importData'), $args);
+        
         if ($f instanceof JSPHP_Runtime_PHPFunctionHeader) {
             return $f->callFunctionWithArgs($context, $args);
         }

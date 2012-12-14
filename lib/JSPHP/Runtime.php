@@ -126,6 +126,8 @@ class JSPHP_Runtime {
     function importData($data) {
         if ($data === null) {
             return null;
+        } else if ($data instanceof JSPHP_Runtime_Object) {
+            return $data;
         } else if (is_object($data)) {
             return $this->createObjectWrapper($data);
         } else if (is_array($data)) {

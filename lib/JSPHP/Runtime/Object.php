@@ -83,4 +83,12 @@ class JSPHP_Runtime_Object implements ArrayAccess, IteratorAggregate {
     function __toString() {
         return $this['toString']->callFunctionWithArgs($this, array ());
     }
+    
+    function __call($f, $args) {
+        if (($data = self::offsetGet($f)) && $data instanceof JSPHP_Runtime_FunctionHeader) {
+            return $data->callFunctionWithArgs($this, $args);
+        } else {
+            throw new Exception("Call to undefined function {$f}");
+        }
+    }
 }
