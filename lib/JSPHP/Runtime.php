@@ -15,8 +15,6 @@ class JSPHP_Runtime {
     public $vm;
     public $environment;
     
-    protected $cachedEvalOpCodeBlocks = array ();
-    
     function __construct() {
         $this->vars = new JSPHP_Runtime_VarScope();
         $this->setupCommonVars();
