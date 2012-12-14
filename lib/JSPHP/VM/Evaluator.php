@@ -8,6 +8,8 @@ class JSPHP_VM_Evaluator {
     public $opIndex = 0;
     public $vars;
     
+    private $exports;
+    
     private $opCodeBlock;
     private $ops = array ();
     
@@ -26,7 +28,19 @@ class JSPHP_VM_Evaluator {
         return $this->opCodeBlock->fileName();
     }
     
+    function addExports(JSPHP_Runtime_Object $obj) {
+        foreach ($obj as $k => $v) {
+            $this->exports[$k] = $v;
+        }
+    }
+    
+    function exports() {
+        return $this->exports;
+    }
+    
     function evaluate() {
+        $this->exports = $this->runtime->createObject();
+        
         // why put these in variables? it's faster. it matters: this loop shoud be freaky fast
         $opIndex = $this->opIndex;
         $ops =& $this->ops;

@@ -15,8 +15,6 @@ class JSPHP_Runtime {
     public $vm;
     public $environment;
     
-    protected $exports = array ();
-    
     protected $cachedEvalOpCodeBlocks = array ();
     
     function __construct() {
@@ -114,11 +112,8 @@ class JSPHP_Runtime {
     }
     
     function runtimeRequire($context, $path) {
-        // TODO: cache so that every file is loaded only once
-        // and find a way to signal the runtime, tell it once we are done running the code
         $this->initEnvironment();
-        $opIndex = $this->environment->loadFile($path);
-        $this->vm->continueAtOpIndex($opIndex);
+        return $this->environment->runFile($path);
     }
     
     function setupJSPHPVars() {

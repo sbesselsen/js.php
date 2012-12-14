@@ -92,6 +92,7 @@ class JSPHP_Environment {
             $this->currentFile = $parentFile;
             throw $e;
         }
+        return $out;
     }
     
     protected function absolutePath($path, $dir = null) {

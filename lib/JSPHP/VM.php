@@ -18,12 +18,28 @@ class JSPHP_VM {
         $this->runtime->vm = $this;
     }
     
+    /**
+     * The line of the current file that we are now executing.
+     * @return int
+     */
     function currentLine() {
         return $this->currentEvaluator->currentLine();
     }
     
+    /**
+     * The file we are currently executing. May be a file name or some other description.
+     * @return string
+     */
     function currentFile() {
         return $this->currentEvaluator->currentFile();
+    }
+    
+    /**
+     * Export key-value pairs from a module.
+     * @param JSPHP_Runtime_Object $obj
+     */
+    function addExports(JSPHP_Runtime_Object $obj) {
+        $this->currentEvaluator->addExports($obj);
     }
     
     /**
@@ -65,7 +81,8 @@ class JSPHP_VM {
         $ev = new JSPHP_VM_Evaluator($this, $opCodeBlock);
         $ev->opIndex = $opIndex;
         $ev->vars = $this->runtime->newVarScope();
-        return $this->runEvaluator($ev);
+        $this->runEvaluator($ev);
+        return $ev->exports();
     }
     
     /**
@@ -131,8 +148,13 @@ class JSPHP_VM {
     private function runEvaluator(JSPHP_VM_Evaluator $ev) {
         $stackedEv = $this->currentEvaluator;
         $this->currentEvaluator = $ev;
-        $out = $ev->evaluate();
-        $this->currentEvaluator = $stackedEv;
+        try {
+            $out = $ev->evaluate();
+            $this->currentEvaluator = $stackedEv;
+        } catch (Exception $e) {
+            $this->currentEvaluator = $stackedEv;
+            throw $e;
+        }
         return $out;
     }
     

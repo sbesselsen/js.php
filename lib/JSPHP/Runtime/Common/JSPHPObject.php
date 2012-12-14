@@ -9,8 +9,8 @@ class JSPHP_Runtime_Common_JSPHPObject {
         $this->runtime = $runtime;
     }
     
-    function export($obj) {
-        return $this->runtime->addExportedFunctions($obj);
+    function export(JSPHP_Runtime_Object $obj) {
+        return $this->runtime->vm->addExports($obj);
     }
     
     function dump($obj) {
