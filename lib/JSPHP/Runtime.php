@@ -42,7 +42,6 @@ class JSPHP_Runtime {
          * - Object instanceof Function
          */
         $objConstructor = new JSPHP_Runtime_FunctionHeader();
-        $objConstructor->isObjectConstructor = true;
         $this->vars['Object'] = $objConstructor;
         $objConstructor['prototype'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_ObjectPrototype(), $objConstructor);
         
