@@ -19,15 +19,7 @@ class JSPHP_Runtime_Common_JSPHPObject {
     
     function assert($val) {
         if (!$val) {
-            $msg = "Assertion failed";
-            if ($line = $this->runtime->vm->currentLine()) {
-                $msg .= " on line {$line}";
-                if ($file = $this->runtime->vm->currentFile()) {
-                    $msg .= " of file {$file}";
-                }
-            }
-            var_dump($msg);
-            exit;
+            $this->runtime->vm->currentEvaluator->error('Assertion failed');
         }
     }
 }

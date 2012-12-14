@@ -23,9 +23,9 @@ class JSPHP_Runtime_PHPObjectWrapper extends JSPHP_Runtime_Object {
         if (isset ($this->wrappedObject->{$k})) {
             $val = $this->wrappedObject->{$k};
             if (is_array($val)) {
-                return $this->runtime->vm->importData($val);
+                return $this->runtime->importData($val);
             } else if (is_object($val) && !$val instanceof JSPHP_Runtime_Object) {
-                return $this->runtime->vm->importData($val);
+                return $this->runtime->importData($val);
             }
             return $val;
         } else if ($f = $this->functionGet($k)) {

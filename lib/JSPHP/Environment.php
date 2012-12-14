@@ -21,11 +21,6 @@ class JSPHP_Environment {
     public $runtime;
     
     /**
-     * @var JSPHP_VM
-     */
-    public $vm;
-    
-    /**
      * @var string
      */
     public $currentFile;
@@ -66,27 +61,9 @@ class JSPHP_Environment {
     /**
      * Load a file and run its code.
      * @param string $path
+     * @return JSPHP_Runtime_Object
      */
     function runFile($path) {
-        return $this->injectOpCode($path, 'runOpCode');
-    }
-    
-    /**
-     * Load a file and return an opIndex.
-     * @param string $path
-     * @return int
-     */
-    function loadFile($path) {
-        return $this->injectOpCode($path, 'loadOpCode');
-    }
-    
-    /**
-     * Load opCode into the VM and call the specified function on the VM.
-     * @param string $path
-     * @param string $f
-     * @return int
-     */
-    protected function injectOpCode($path, $call) {
         if (!$this->componentsInitialized) {
             $this->initComponents();
         }
@@ -98,25 +75,23 @@ class JSPHP_Environment {
             $path = realpath($path);
         }
         
+        if (!$path || !file_exists($path)) {
+            throw new Exception("Can't read file {$path}");
+        }
+        $data = file_get_contents($path);
+        
+        $tree = $this->parser->parseJS($data);
+        $ops = $this->compiler->compile($tree);
+        
+        $block = $this->runtime->vm->loadOpCode($ops, $path);
         $this->currentFile = $path;
         try {
-            if (!$path || !file_exists($path)) {
-                throw new Exception("Can't read file {$path}");
-            }
-            $data = file_get_contents($path);
-            
-            $tree = $this->parser->parseJS($data);
-            $ops = $this->compiler->compile($tree);
-            
-            $out = $this->runtime->vm->$call($ops, $path);
-            
+            $out = $this->runtime->vm->runBlockAsModule($block);
             $this->currentFile = $parentFile;
         } catch (Exception $e) {
             $this->currentFile = $parentFile;
             throw $e;
         }
-        
-        return $out;
     }
     
     protected function absolutePath($path, $dir = null) {
@@ -126,20 +101,3 @@ class JSPHP_Environment {
         return realpath($dir . DIRECTORY_SEPARATOR . $path);
     }
 }
-
-/*
-
-
-$p = new JSPHP_Parser();
-$file = file_get_contents("{$dir}/test.js");
-
-$parsed = $p->parseJS($file);
-
-$c = new JSPHP_Compiler();
-$ops = $c->compile($parsed);
-
-$runtime = new JSPHP_Runtime();
-
-$vm = new JSPHP_VM($runtime);
-var_dump($vm->runOpCode($ops, 'test.js'));
-*/

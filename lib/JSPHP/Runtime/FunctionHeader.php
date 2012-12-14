@@ -4,9 +4,11 @@ require_once 'JSPHP/Runtime/Object.php';
 class JSPHP_Runtime_FunctionHeader extends JSPHP_Runtime_Object {
     public $numParams = 0;
     public $parentVarScope;
-    public $opIndex = -1;
     public $referencesArguments = false;
     public $runtime;
+    
+    public $opIndex;
+    public $opCodeBlock;
     
     function callFunction() {
         $args = func_get_args();

@@ -3,13 +3,11 @@ require_once 'JSPHP/Runtime/FunctionHeader.php';
 
 class JSPHP_Runtime_PHPFunctionHeader extends JSPHP_Runtime_FunctionHeader {
     private $callback;
-    public $pushesReturnValue;
     public $ignoreContext = false;
     
-    function __construct(JSPHP_Runtime_FunctionHeader $constructor, $callback, $pushesReturnValue = true) {
+    function __construct(JSPHP_Runtime_FunctionHeader $constructor, $callback) {
         parent::__construct($constructor);
         $this->callback = $callback;
-        $this->pushesReturnValue = $pushesReturnValue;
     }
     
     function callFunction() {

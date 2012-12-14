@@ -16,13 +16,11 @@ class JSPHP_Runtime {
     public $environment;
     
     protected $exports = array ();
-    protected $commonVars;
     
-    protected $cachedEvalOpCode = array ();
+    protected $cachedEvalOpCodeBlocks = array ();
     
     function __construct() {
-        $this->commonVars = new JSPHP_Runtime_VarScope();
-        $this->vars = new JSPHP_Runtime_VarScope($this->commonVars);
+        $this->vars = new JSPHP_Runtime_VarScope();
         $this->setupCommonVars();
         $this->setupJSPHPVars();
     }
@@ -45,41 +43,45 @@ class JSPHP_Runtime {
          */
         $objConstructor = new JSPHP_Runtime_FunctionHeader();
         $objConstructor->isObjectConstructor = true;
-        $this->commonVars['Object'] = $objConstructor;
+        $this->vars['Object'] = $objConstructor;
         $objConstructor['prototype'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_ObjectPrototype(), $objConstructor);
         
         $functionConstructor = new JSPHP_Runtime_FunctionHeader();
         $objConstructor->setConstructor($functionConstructor);
         $functionConstructor->setConstructor($functionConstructor);
         $functionConstructor->setPrototype($this->createObject());
-        $this->commonVars['Function'] = $functionConstructor;
+        $this->vars['Function'] = $functionConstructor;
         $functionPrototype = $functionConstructor['prototype'] = $this->createObject();
         
         /**
          * Set up all the other machinery
          */
-        $functionConstructor['prototype']['call'] = $this->createPHPFunction(array ($this, 'runtimeFunctionCall'), false);
-        $functionConstructor['prototype']['apply'] = $this->createPHPFunction(array ($this, 'runtimeFunctionApply'), false);
+        $functionConstructor['prototype']['call'] = $this->createPHPFunction(array ($this, 'runtimeFunctionCall'));
+        $functionConstructor['prototype']['apply'] = $this->createPHPFunction(array ($this, 'runtimeFunctionApply'));
         
-        $this->commonVars['Array'] = $this->createFunction();
-        $this->commonVars['String'] = $this->createPHPFunction(array ($this, 'createString'));
-        $this->commonVars['String']['prototype'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_StringPrototype(), $objConstructor);
+        $this->vars['Array'] = $this->createFunction();
+        $this->vars['String'] = $this->createPHPFunction(array ($this, 'createString'));
+        $this->vars['String']['prototype'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_StringPrototype(), $objConstructor);
         
-        $this->commonVars['Number'] = $this->createPHPFunction(array ($this, 'createNumber'));
-        $this->commonVars['Number']['prototype'] = $this->createObject();
-        $this->commonVars['Boolean'] = $this->createPHPFunction(array ($this, 'createBoolean'));
-        $this->commonVars['Boolean']['prototype'] = $this->createObject();
+        $this->vars['Number'] = $this->createPHPFunction(array ($this, 'createNumber'));
+        $this->vars['Number']['prototype'] = $this->createObject();
+        $this->vars['Boolean'] = $this->createPHPFunction(array ($this, 'createBoolean'));
+        $this->vars['Boolean']['prototype'] = $this->createObject();
         
-        $this->commonVars['Math'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_MathObject(), $objConstructor);
+        $this->vars['Math'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_MathObject(), $objConstructor);
         
-        $this->commonVars['eval'] = $this->createPHPFunction(array ($this, 'runtimeEval'), false);
+        $this->vars['eval'] = $this->createPHPFunction(array ($this, 'runtimeEval'));
+    }
+    
+    function newVarScope() {
+        return new JSPHP_Runtime_VarScope($this->vars);
     }
     
     function runtimeFunctionCall() {
         $args = func_get_args();
         $f = array_shift($args);
         $context = array_shift($args);
-        $this->vm->prepareFunctionCall($f, $context, $args);
+        return $this->vm->callFunction($f, $context, $args);
     }
     
     function runtimeFunctionApply($f, $context, $args = null) {
@@ -90,21 +92,26 @@ class JSPHP_Runtime {
         } else if(!is_array($args)) {
             throw new Exception("Argument 2 of .apply should be an array");
         }
-        $this->vm->prepareFunctionCall($f, $context, $args);
+        return $this->vm->callFunction($f, $context, $args);
     }
     
     function runtimeEval($context, $code) {
-        // TODO: merge this as much as possible with runtimeRequire
         $label = substr(md5("eval({$code})"), 0, 12);
-        if (isset ($this->cachedEvalOpCode[$label])) {
-            $ops = $this->cachedEvalOpCode[$label];
-        } else {
+        if (!$block = $this->vm->cacheGetOpCodeBlock($label)) {
             $this->initEnvironment();
             $tree = $this->environment->parser->parseJS($code);
             $ops = $this->environment->compiler->compile($tree);
-            $this->cachedEvalOpCode[$label] = $ops;
+            $desc = "eval'ed code";
+            if ($line = $this->vm->currentLine()) {
+                $desc .= " on line {$line}";
+                if ($fileName = $this->vm->currentFile()) {
+                    $desc .= " of {$fileName}";
+                }
+            }
+            $block = $this->vm->loadOpCodeForEval($ops, $desc);
+            $this->vm->cacheSetOpCodeBlock($label, $block);
         }
-        $this->vm->evalOpCode($ops, $label);
+        return $this->vm->runBlockInCurrentScope($block);
     }
     
     function runtimeRequire($context, $path) {
@@ -117,39 +124,8 @@ class JSPHP_Runtime {
     
     function setupJSPHPVars() {
         $jsPHPObject = new JSPHP_Runtime_Common_JSPHPObject($this);
-        $this->commonVars['jsphp'] = $this->createObjectWrapper($jsPHPObject, $this->vars['Object']);
-        $this->commonVars['jsphp']['require'] = $this->createPHPFunction(array ($this, 'runtimeRequire'), false);
-    }
-    
-    /**
-     * Add exported functions at the request of JS code.
-     * @param JSPHP_Runtime_Object $functions
-     */ 
-    function addExportedFunctions(JSPHP_Runtime_Object $functions) {
-        foreach ($functions as $name => $f) {
-            $this->exports[$name] = $f;
-        }
-    }
-    
-    /**
-     * Call a function that has been exported from the JS environment.
-     * @param string $name
-     * @param array $args
-     * @return mixed
-     */
-    function callExportedFunction($name, $args) {
-        if (!isset ($this->exports[$name])) {
-            throw new Exception("Function not exported: {$name}");
-        }
-        if (!$this->exports[$name] instanceof JSPHP_Runtime_FunctionHeader) {
-            throw new Exception("Export is not a function: {$name}");
-        }
-        $f = $this->exports[$name];
-        
-        // import args
-        $args = array_map(array ($this, 'importData'), $args);
-        
-        return $this->vm->callFunction($f, null, $args);
+        $this->vars['jsphp'] = $this->createObjectWrapper($jsPHPObject, $this->vars['Object']);
+        $this->vars['jsphp']['require'] = $this->createPHPFunction(array ($this, 'runtimeRequire'), false);
     }
     
     /**
@@ -212,8 +188,8 @@ class JSPHP_Runtime {
         return $f;
     }
     
-    function createPHPFunction($callback, $pushesReturnValue = true) {
-        $f = new JSPHP_Runtime_PHPFunctionHeader($this->vars['Function'], $callback, $pushesReturnValue);
+    function createPHPFunction($callback) {
+        $f = new JSPHP_Runtime_PHPFunctionHeader($this->vars['Function'], $callback);
         $f['prototype'] = $this->createObject();
         return $f;
     }
