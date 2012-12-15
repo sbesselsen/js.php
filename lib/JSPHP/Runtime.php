@@ -56,6 +56,7 @@ class JSPHP_Runtime {
         
         $this->vars['Array'] = $this->createFunction();
         $this->vars['String'] = $this->createPHPFunction(array ($this, 'createString'));
+        $this->vars['String']['fromCharCode'] = $this->createPHPFunction(array ('JSPHP_Runtime_Common_StringPrototype', 'fromCharCode'));
         $this->vars['String']['prototype'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_StringPrototype(), $objConstructor);
         
         $this->vars['Number'] = $this->createPHPFunction(array ($this, 'createNumber'));

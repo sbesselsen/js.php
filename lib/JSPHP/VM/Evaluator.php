@@ -271,6 +271,8 @@ class JSPHP_VM_Evaluator {
         if (is_string($obj)) {
             if ($k == 'length') {
                 $this->stack[] = iconv_strlen($obj, 'UTF-8');
+            } else if ($k == 'constructor') {
+                $this->stack[] = $this->vars['String'];
             } else {
                 $this->stack[] = $this->vars['String']['prototype'][$k];
             }
