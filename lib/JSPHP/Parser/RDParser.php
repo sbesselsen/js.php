@@ -959,7 +959,7 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
     function regexpExpr() {
         $regex = $this->regex("\/((\\\[/\\\a-zA-Z]|\\\u[0-9abcdef]{4}|[^\\\/])*)\/([a-z]*)");
         $pattern = $regex[1];
-        $flags = $regex[2];
+        $flags = $regex[3];
         $pattern = preg_replace('((?<!\\\)((\\\\\\\)*)[\\\]/)', '/', $pattern);
         $ops = array ();
         $ops[] = array ('pushvar', 'RegExp');
