@@ -971,7 +971,6 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
         }
         $ops[] = array ('pushnum', $numArgs);
         $ops[] = array ('callconstr');
-        $ops[] = array ('pop');
         return $ops;
     }
     
@@ -1092,7 +1091,6 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
         }
         $ops[] = array ('pushnum', $numArgs);
         $ops[] = array ('callconstr');
-        $ops[] = array ('pop');
         $ops[] = array ('-', 'end object creation');
         return $ops;
     }
