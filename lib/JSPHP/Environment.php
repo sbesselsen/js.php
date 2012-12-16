@@ -80,10 +80,13 @@ class JSPHP_Environment {
         }
         $data = file_get_contents($path);
         
-        $tree = $this->parser->parseJS($data);
-        $ops = $this->compiler->compile($tree);
-        
-        $block = $this->runtime->vm->loadOpCode($ops, $path);
+        $blockCacheK = md5($data);
+        if (!$block = $this->cacheGetOpCodeBlock($blockCacheK)) {
+            $tree = $this->parser->parseJS($data);
+            $ops = $this->compiler->compile($tree);
+            $block = $this->runtime->vm->loadOpCode($ops, $path);
+            $this->cacheSetOpCodeBlock($blockCacheK, $block);
+        }
         $this->currentFile = $path;
         try {
             $out = $this->runtime->vm->runBlockAsModule($block);
@@ -93,6 +96,19 @@ class JSPHP_Environment {
             throw $e;
         }
         return $out;
+    }
+    
+    function cacheGetOpCodeBlock($k) {
+        if ($this->runtime && $this->runtime->vm
+            && ($block = $this->runtime->vm->cacheGetOpCodeBlock($k))) {
+            return $block;
+        }
+    }
+    
+    function cacheSetOpCodeBlock($k, JSPHP_VM_OpCodeBlock $block) {
+        if ($this->runtime && $this->runtime->vm) {
+            $this->runtime->vm->cacheSetOpCodeBlock($k, $block);
+        }
     }
     
     protected function absolutePath($path, $dir = null) {
