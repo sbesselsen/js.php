@@ -9,6 +9,7 @@ require_once 'JSPHP/Runtime/Common/JSPHPObject.php';
 require_once 'JSPHP/Runtime/Common/MathObject.php';
 require_once 'JSPHP/Runtime/Common/ObjectPrototype.php';
 require_once 'JSPHP/Runtime/Common/StringPrototype.php';
+require_once 'JSPHP/Runtime/Common/RegExp.php';
 
 class JSPHP_Runtime {
     public $vars;
@@ -63,6 +64,8 @@ class JSPHP_Runtime {
         $this->vars['Number']['prototype'] = $this->createObject();
         $this->vars['Boolean'] = $this->createPHPFunction(array ($this, 'createBoolean'));
         $this->vars['Boolean']['prototype'] = $this->createObject();
+        $this->vars['RegExp'] = $this->createPHPFunction(array ($this, 'createRegExp'));
+        $this->vars['RegExp']['prototype'] = $this->createObject();
         
         $this->vars['Math'] = $this->createObjectWrapper(new JSPHP_Runtime_Common_MathObject(), $objConstructor);
         
@@ -187,6 +190,10 @@ class JSPHP_Runtime {
         $f = new JSPHP_Runtime_PHPFunctionHeader($this->vars['Function'], $callback);
         $f['prototype'] = $this->createObject();
         return $f;
+    }
+    
+    function createRegExp($pattern, $flags = null) {
+        return new JSPHP_Runtime_Common_RegExp($this->vars['RegExp'], $pattern, $flags);
     }
     
     function createObjectWrapper($obj, $constructor = null) {

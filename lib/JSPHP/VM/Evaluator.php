@@ -356,6 +356,10 @@ class JSPHP_VM_Evaluator {
             }
             $this->stack[] = $object;
             $this->stack[] = null;
+        } else if ($constructor === $this->vars['RegExp']) {
+            $object = $this->runtime->createRegExp(isset ($args[0]) ? $args[0] : '', isset ($args[1]) ? $args[1] : null);
+            $this->stack[] = $object;
+            $this->stack[] = null;
         } else {
             // JS constructor
             $object = $this->runtime->createObject(null, $constructor);

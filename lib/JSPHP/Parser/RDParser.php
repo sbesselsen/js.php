@@ -28,6 +28,7 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
         'notExpr' => array ('!'),
         'functionDef' => array ('function'),
         'stringExpr' => array ('"', "'"),
+        'regexpExpr' => array ('/'),
         'arrayExpr' => array ('['),
         'objectExpr' => array ('{'),
         'typeofExpr' => array ('typeof'),
@@ -650,6 +651,9 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
         if ($expr = $this->tryTypeofExpr()) {
             return $expr;
         }
+        if ($expr = $this->tryRegexpExpr()) {
+            return $this->derefExpand($expr, $prefixOp);
+        }
         $this->expected('expression');
     }
     
@@ -950,6 +954,25 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
         if (($str = $this->stringValue()) !== null) {
             return array (array ('pushstr', $str));
         }
+    }
+    
+    function regexpExpr() {
+        $regex = $this->regex("\/((\\\[/\\\a-zA-Z]|\\\u[0-9abcdef]{4}|[^\\\/])*)\/([a-z]*)");
+        $pattern = $regex[1];
+        $flags = $regex[2];
+        $pattern = preg_replace('((?<!\\\)((\\\\\\\)*)[\\\]/)', '/', $pattern);
+        $ops = array ();
+        $ops[] = array ('pushvar', 'RegExp');
+        $ops[] = array ('pushstr', $pattern);
+        $numArgs = 1;
+        if ($flags) {
+            $ops[] = array ('pushstr', $flags);
+            $numArgs++;
+        }
+        $ops[] = array ('pushnum', $numArgs);
+        $ops[] = array ('callconstr');
+        $ops[] = array ('pop');
+        return $ops;
     }
     
     function stringValue() {
