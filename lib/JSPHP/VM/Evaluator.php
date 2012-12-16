@@ -343,19 +343,8 @@ class JSPHP_VM_Evaluator {
         
         if ($constructor === $this->vars['String']) {
             $this->stack[] = isset ($args[0]) ? (string)$args[0] : '';
-            return;
         } else if ($constructor === $this->vars['Array']) {
             $this->stack[] = $this->runtime->createArray($args);
-        } else if ($constructor === $this->vars['Number'] || 
-                   $constructor === $this->vars['Boolean']) {
-            $object = $this->runtime->createObject(null, $constructor);
-            if (isset ($args[0])) {
-                $object->primitiveValue = $args[0];
-            }
-            $this->stack[] = $object;
-        } else if ($constructor === $this->vars['RegExp']) {
-            $object = $this->runtime->createRegExp(isset ($args[0]) ? $args[0] : '', isset ($args[1]) ? $args[1] : null);
-            $this->stack[] = $object;
         } else {
             // JS constructor
             $object = $this->runtime->createObject(null, $constructor);
