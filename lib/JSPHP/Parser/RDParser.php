@@ -1104,6 +1104,10 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
     }
     
     function utf8FromHexUnicodePoint($hex) {
+        /**
+         * Based on code from Scott Reynen.
+         * See: http://randomchaos.com/documents/?source=php_and_unicode
+         */
         $n = hexdec($hex);
         if ($n < 128) {
             return chr($n);
