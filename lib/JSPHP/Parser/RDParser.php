@@ -953,13 +953,37 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
     }
     
     function stringValue() {
-        if ($regex = $this->tryRegex("'((\\\\'|[^'])*)'")) {
+        if ($regex = $this->tryRegex("'((\\\[\'\\\bfnrt]|\\\u[0-9abcdef]{4}|[^\\\']*)*)'")) {
             // single-quoted
-            return str_replace("\'", "'", $regex[1]);
+            $str = $regex[1];
+            foreach (array ('b' => "\b", 'f' => "\f", 'n' => "\n", 'r' => "\r", 't' => "\t", '\'' => '\'') as $from => $to) {
+                $str = preg_replace('((?<!\\\)((\\\\\\\)*)[\\\]' . $from . ')', '\\1' . $to, $str);
+            }
+            $str = str_replace('\\\\', '\\', $str);
+            if (preg_match_all('(\\\u([0-9abcdef]{4}))', $str, $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $match) {
+                    list ($esc, $hex) = $match;
+                    $char = $this->utf8FromHexUnicodePoint($hex);
+                    $str = str_replace($esc, $char, $str);
+                }
+            }
+            return $str;
         } else {
             // double-quoted
-            $regex = $this->regex('"((\\\\"|[^"])*)"');
-            return str_replace('\"', '"', $regex[1]);
+            $regex = $this->regex("\"(([\\\][\"\\\bfnrt]|\\\u[0-9abcdef]{4}|[^\\\\\"]*)*)\"");
+            $str = $regex[1];
+            foreach (array ('b' => "\b", 'f' => "\f", 'n' => "\n", 'r' => "\r", 't' => "\t", '"' => '"') as $from => $to) {
+                $str = preg_replace('((?<!\\\)((\\\\\\\)*)[\\\]' . $from . ')', '\\1' . $to, $str);
+            }
+            $str = str_replace('\\\\', '\\', $str);
+            if (preg_match_all('(\\\u([0-9abcdef]{4}))', $str, $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $match) {
+                    list ($esc, $hex) = $match;
+                    $char = $this->utf8FromHexUnicodePoint($hex);
+                    $str = str_replace($esc, $char, $str);
+                }
+            }
+            return $str;
         }
     }
     
@@ -1077,5 +1101,19 @@ class JSPHP_Parser_RDParser extends Sparse_RDParser {
         }
         $out[] = array ('throwex');
         return $out;
+    }
+    
+    function utf8FromHexUnicodePoint($hex) {
+        $n = hexdec($hex);
+        if ($n < 128) {
+            return chr($n);
+        } else if ($n < 2048) {
+            return chr(192 + (($n - ($n % 64)) / 64))
+                . chr(128 + ($n % 64));
+        } else {
+            return chr(224 + (($n - ($n % 4096)) / 4096))
+                . chr(128 + ((($n % 4096) - ($n % 64)) / 64))
+                . chr(128 + ($n % 64));
+        }
     }
 }
