@@ -4,6 +4,7 @@ JS.php
 JS.php is a project that allows you to parse and run Javascript code in a PHP environment. It includes its own parser/compiler, a VM and a runtime environment; together these are enough to pull tricks like this:
 
 calc.js:
+
     var x = 10;
     var f = function (a, b, c) {
       return a(b + c + x);
@@ -19,6 +20,7 @@ calc.js:
     })
 
 calc.php:
+
     $exports = $e->runFile("{$dir}/calc.js");
     var_dump($exports->g(1, 2)); // => 26
     $exports->setX(5);
