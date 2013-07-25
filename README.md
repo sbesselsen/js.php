@@ -21,15 +21,71 @@ calc.js:
 
 calc.php:
 
-    $e = new JSPHP_Environment();
+    $e = new JSPHP_Environment;
     $exports = $e->runFile("{$dir}/calc.js");
     var_dump($exports->g(1, 2)); // => 26
     $exports->setX(5);
     var_dump($exports->g(1, 2)); // => 16
 
+You can also go much further and manipulate PHP objects, jumping between PHP and Javascript:
+
+objects.js:
+
+    var priceReductionFunction = function (product) {
+      if (product.id == 5) {
+        return 5;
+      }
+    }
+    jsphp.export({
+      calculatePrice: function (product, priceCalculator) {
+        // call PHP functions on PHP objects from Javascript
+        product.setPrice(priceCalculator.priceForProduct(product, priceReductionFunction));
+      }
+    })
+
+objects.php:
+
+    class PricesCalculator {
+      function priceForProduct($product, $priceReductionFunction = null) {
+        $product = $product->wrappedObject; // $product is a Javascript object; get the PHP object it wraps
+        if ($product->id == 5) {
+          $price = 100;
+        } else {
+          $price = 50;
+        }
+        if ($priceReductionFunction) {
+          $price -= $priceReductionFunction->callFunction($product); // call a Javascript function from PHP
+        }
+        return $price;
+      }
+    }
+    
+    class Product {
+      public $id;
+      function setPrice($price) {
+        $this->price = $price;
+      }
+    }
+    
+    $e = new JSPHP_Environment;
+    $exports = $e->runFile("{$dir}/objects.js");
+    $product1 = new Product;
+    $product1->id = 5;
+    $product2 = new Product;
+    $product2->id = 6;
+    
+    $calculator = new PricesCalculator;
+    // passing PHP objects into Javascript
+    $exports->calculatePrice($product1, $calculator);
+    var_dump($product1->price); // => 95
+    $exports->calculatePrice($product2, $calculator);
+    var_dump($product2->price); // => 50
+
 Why?
 ====
 I built it because I wanted to learn how to build a thing like this. That said, it may have some use in practical scenarios where you want to share logic between your frontend and backend. For instance, you can run the same form validation code on the frontend and on the backend, or perform a calculation on the server or on the client depending on circumstances. Another unholy idea that I have been pondering is using JSPHP as a kind of scripting language within CMS environments.
+
+Of course, node.js would be far more suitable in both cases. JS.php is probably only useful in a few obscure cases, but hey!
 
 Does it support complicated Javascript stuff?
 ====
@@ -45,6 +101,10 @@ Well, not nearly everything, but it does support:
 * Most Unicode stuff
 
 (Or at least to the degree that I understand these things and have managed to test them. Check out `testsuite.js`.)
+
+Possible misapprehensions
+====
+This is **not** a tool to communicate between server-side PHP code and client-side Javascript. That's so 2005. This is an environment to run Javascript on the server using only the PHP runtime.
 
 Performance
 ===========
