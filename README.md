@@ -21,6 +21,7 @@ calc.js:
 
 calc.php:
 
+    $e = new JSPHP_Environment();
     $exports = $e->runFile("{$dir}/calc.js");
     var_dump($exports->g(1, 2)); // => 26
     $exports->setX(5);
@@ -29,6 +30,21 @@ calc.php:
 Why?
 ====
 I built it because I wanted to learn how to build a thing like this. That said, it may have some use in practical scenarios where you want to share logic between your frontend and backend. For instance, you can run the same form validation code on the frontend and on the backend, or perform a calculation on the server or on the client depending on circumstances. Another unholy idea that I have been pondering is using JSPHP as a kind of scripting language within CMS environments.
+
+Does it support complicated Javascript stuff?
+====
+Well, not nearly everything, but it does support:
+
+* Lexical scoping
+* Closures
+* Prototypal inheritance with constructors
+* `eval()`
+* `try/catch`
+* Mutable `Array`/`Object` prototypes
+* `this`, `.call()`, `.apply()`, `arguments` (though without `caller` or `callee`)
+* Most Unicode stuff
+
+(Or at least to the degree that I understand these things and have managed to test them. Check out `testsuite.js`.)
 
 Performance
 ===========
